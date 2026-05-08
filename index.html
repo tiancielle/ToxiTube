@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ToxiTube — YouTube Comment Toxicity Detector</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,500;0,700;1,300;1,500&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red:        #E8341A;
+    --red-soft:   #FFF0ED;
+    --red-mid:    #FFCCC5;
+    --green:      #1A9E6B;
+    --green-soft: #EDF9F4;
+    --green-mid:  #B2E8D4;
+    --amber:      #D97706;
+    --amber-soft: #FFFBEB;
+    --ink:        #1A1A2E;
+    --ink-mid:    #4A4A6A;
+    --ink-light:  #9898B8;
+    --paper:      #FAFAF7;
+    --paper-2:    #F4F3EE;
+    --paper-3:    #ECEAE3;
+    --white:      #FFFFFF;
+    --border:     #E4E2DA;
+    --shadow:     0 2px 16px rgba(26,26,46,0.07);
+    --shadow-lg:  0 8px 40px rgba(26,26,46,0.12);
+    --radius:     14px;
+    --radius-sm:  8px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--white);
+    border-bottom: 1px solid var(--border);
+    padding: 0 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 72px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 1px 0 var(--border);
+  }
+
+  .logo-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-wrap img {
+    height: 44px;
+    width: 44px;
+    object-fit: contain;
+  }
+
+  .logo-text {
+    font-family: 'Fraunces', serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+  }
+
+  .logo-text span { color: var(--red); }
+
+  .header-badge {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--ink-light);
+    background: var(--paper-2);
+    border: 1px solid var(--border);
+    padding: 4px 12px;
+    border-radius: 20px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 5rem 3rem 3.5rem;
+    max-width: 860px;
+    margin: 0 auto;
+    text-align: center;
+    position: relative;
+  }
+
+  .hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--red);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    background: var(--red-soft);
+    border: 1px solid var(--red-mid);
+    padding: 5px 14px;
+    border-radius: 20px;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(2.8rem, 6vw, 4.2rem);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+    margin-bottom: 1.2rem;
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    color: var(--red);
+  }
+
+  .hero p {
+    font-size: 1.1rem;
+    font-weight: 300;
+    color: var(--ink-mid);
+    line-height: 1.7;
+    max-width: 540px;
+    margin: 0 auto 2.5rem;
+  }
+
+  /* ── TABS ── */
+  .tabs-wrap {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 3rem;
+  }
+
+  .tab-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 10px 24px;
+    border-radius: 30px;
+    border: 1.5px solid var(--border);
+    background: var(--white);
+    color: var(--ink-mid);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .tab-btn:hover {
+    border-color: var(--red);
+    color: var(--red);
+    background: var(--red-soft);
+  }
+
+  .tab-btn.active {
+    background: var(--red);
+    border-color: var(--red);
+    color: white;
+    box-shadow: 0 4px 16px rgba(232,52,26,0.25);
+  }
+
+  /* ── ICON IMAGES ── */
+  .icon-img {
+    height: 1.2em;
+    width: 1.2em;
+    object-fit: contain;
+    vertical-align: middle;
+    flex-shrink: 0;
+  }
+
+  .empty-icon img {
+    height: 3rem;
+    width: 3rem;
+    object-fit: contain;
+  }
+
+  /* ── MAIN CONTENT ── */
+  .main {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 3rem 6rem;
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── INPUT SECTION ── */
+  .input-section {
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow);
+  }
+
+  .input-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--ink-light);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.7rem;
+    display: block;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  input[type="text"],
+  textarea {
+    width: 100%;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    resize: none;
+  }
+
+  input[type="text"]::placeholder,
+  textarea::placeholder { color: var(--ink-light); }
+
+  input[type="text"]:focus,
+  textarea:focus {
+    border-color: var(--red);
+    box-shadow: 0 0 0 3px rgba(232,52,26,0.1);
+    background: var(--white);
+  }
+
+  .btn-primary {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 12px 24px;
+    background: var(--red);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    box-shadow: 0 4px 12px rgba(232,52,26,0.2);
+  }
+
+  .btn-primary:hover {
+    background: #CC2E16;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(232,52,26,0.3);
+  }
+
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* ── LOADER ── */
+  .loader {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 1.5rem 2rem;
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 1.5rem;
+    color: var(--ink-mid);
+    font-size: 0.9rem;
+    box-shadow: var(--shadow);
+  }
+
+  .loader.show { display: flex; }
+
+  .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2.5px solid var(--border);
+    border-top-color: var(--red);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── METRICS ── */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 1.5rem;
+  }
+
+  .metric-card {
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: var(--shadow);
+  }
+
+  .metric-value {
+    font-family: 'Fraunces', serif;
+    font-size: 2.6rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+
+  .metric-label {
+    font-size: 0.73rem;
+    font-weight: 600;
+    color: var(--ink-light);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 0.4rem;
+  }
+
+  .gauge-track {
+    height: 5px;
+    background: var(--paper-3);
+    border-radius: 10px;
+    margin-top: 0.8rem;
+    overflow: hidden;
+  }
+
+  .gauge-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* ── VIDEO INFO ── */
+  .video-card {
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.2rem 1.5rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow);
+  }
+
+  .video-card img {
+    width: 120px;
+    height: 68px;
+    object-fit: cover;
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+
+  .video-card-info h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 0.3rem;
+    line-height: 1.3;
+  }
+
+  .video-card-info p {
+    font-size: 0.82rem;
+    color: var(--ink-light);
+  }
+
+  /* ── FILTER ── */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 1.2rem;
+    flex-wrap: wrap;
+  }
+
+  .filter-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--ink-light);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-right: 4px;
+  }
+
+  .filter-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: var(--white);
+    color: var(--ink-mid);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .filter-btn:hover { border-color: var(--ink-mid); color: var(--ink); }
+
+  .filter-btn.active-all   { background: var(--ink); border-color: var(--ink); color: white; }
+  .filter-btn.active-toxic { background: var(--red); border-color: var(--red); color: white; }
+  .filter-btn.active-normal{ background: var(--green); border-color: var(--green); color: white; }
+
+  .result-count {
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: var(--ink-light);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* ── COMMENT CARDS ── */
+  .comments-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .comment-card {
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.3rem;
+    border-left: 4px solid;
+    box-shadow: var(--shadow);
+    animation: fadeUp 0.3s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .comment-card.toxic  { border-left-color: var(--red);   background: linear-gradient(to right, #FFF7F6, var(--white)); }
+  .comment-card.normal { border-left-color: var(--green); background: linear-gradient(to right, #F5FBF8, var(--white)); }
+
+  .comment-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.6rem;
+  }
+
+  .comment-author {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--ink-mid);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .comment-likes {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--ink-light);
+  }
+
+  .badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .badge.toxic  { background: var(--red-soft);   color: var(--red);   border: 1px solid var(--red-mid); }
+  .badge.normal { background: var(--green-soft);  color: var(--green); border: 1px solid var(--green-mid); }
+
+  .comment-text {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--ink);
+    margin-bottom: 0.7rem;
+  }
+
+  .word-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .chip {
+    font-size: 0.72rem;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .chip.toxic  { background: var(--red-soft);  color: var(--red);   border: 1px solid var(--red-mid); }
+  .chip.normal { background: var(--green-soft); color: var(--green); border: 1px solid var(--green-mid); }
+
+  /* ── RESULT BOX (tab 2) ── */
+  .result-box {
+    border-radius: var(--radius);
+    padding: 2.5rem;
+    text-align: center;
+    margin-bottom: 2rem;
+    animation: fadeUp 0.4s ease;
+  }
+
+  .result-box.toxic {
+    background: linear-gradient(135deg, #FFF0ED 0%, #FFE4DE 100%);
+    border: 1.5px solid var(--red-mid);
+  }
+
+  .result-box.normal {
+    background: linear-gradient(135deg, #EDF9F4 0%, #D4F1E7 100%);
+    border: 1.5px solid var(--green-mid);
+  }
+
+  .result-icon { font-size: 3rem; margin-bottom: 0.8rem; }
+
+  .result-title {
+    font-family: 'Fraunces', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.4rem;
+  }
+
+  .result-box.toxic  .result-title { color: var(--red); }
+  .result-box.normal .result-title { color: var(--green); }
+
+  .result-sub {
+    font-size: 0.88rem;
+    color: var(--ink-mid);
+    font-weight: 300;
+  }
+
+  /* ── EXPLAIN GRID ── */
+  .explain-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 1.5rem;
+  }
+
+  .explain-card {
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.3rem;
+    box-shadow: var(--shadow);
+  }
+
+  .explain-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .explain-title.toxic  { color: var(--red); }
+  .explain-title.normal { color: var(--green); }
+
+  /* ── PREPROCESSED ── */
+  .preproc-wrap {
+    background: var(--white);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.3rem;
+    box-shadow: var(--shadow);
+    margin-bottom: 1.5rem;
+  }
+
+  .preproc-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--ink-light);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.6rem;
+  }
+
+  .preproc-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--ink-mid);
+    line-height: 1.6;
+    word-break: break-word;
+  }
+
+  /* ── ERROR ── */
+  .error-box {
+    background: var(--red-soft);
+    border: 1.5px solid var(--red-mid);
+    border-radius: var(--radius-sm);
+    padding: 1rem 1.3rem;
+    color: var(--red);
+    font-size: 0.88rem;
+    margin-bottom: 1.5rem;
+    display: none;
+  }
+
+  .error-box.show { display: block; }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--ink-light);
+  }
+
+  .empty-state .empty-icon { 
+    font-size: 3rem; 
+    margin-bottom: 1rem; 
+    display: flex;
+    justify-content: center;
+  }
+  .empty-state p { font-size: 0.9rem; line-height: 1.6; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--paper); }
+  ::-webkit-scrollbar-thumb { background: var(--paper-3); border-radius: 3px; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 640px) {
+    header { padding: 0 1.2rem; }
+    .hero  { padding: 3rem 1.2rem 2rem; }
+    .main  { padding: 0 1.2rem 4rem; }
+    .metrics-grid { grid-template-columns: 1fr; }
+    .explain-grid { grid-template-columns: 1fr; }
+    .input-row { flex-direction: column; }
+    .hero h1 { font-size: 2.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo-wrap">
+    <img id="logo-img" src="logo.png" alt="ToxiTube Logo"
+         onerror="this.style.display='none'">
+    <span class="logo-text">Toxi<span>Tube</span></span>
+  </div>
+  <span class="header-badge">NLP · Text Mining · v1.0</span>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+      <circle cx="5" cy="5" r="5"/>
+    </svg>
+    YouTube Comments Toxicity Detector
+  </div>
+  <h1>Détectez la <em>toxicité</em><br>en un instant</h1>
+  <p>Analysez les commentaires YouTube en temps réel grâce à notre modèle LinearSVC + TF-IDF entraîné sur 160 000 commentaires Jigsaw.</p>
+
+  <div class="tabs-wrap">
+    <button class="tab-btn active" onclick="switchTab('youtube')">
+      <img src="video.png" alt="Video" class="icon-img"> Analyser une vidéo
+    </button>
+    <button class="tab-btn" onclick="switchTab('text')">
+      <img src="copy-writing.png" alt="Write" class="icon-img"> Tester un commentaire
+    </button>
+  </div>
+</section>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- ══ TAB YOUTUBE ══ -->
+  <div class="tab-panel active" id="panel-youtube">
+
+    <div class="input-section">
+      <label class="input-label">URL de la vidéo YouTube</label>
+      <div class="input-row">
+        <input type="text" id="yt-url"
+               placeholder="https://www.youtube.com/watch?v=..."
+               onkeydown="if(event.key==='Enter') analyzeYoutube()">
+        <button class="btn-primary" onclick="analyzeYoutube()" id="yt-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Analyser
+        </button>
+      </div>
+    </div>
+
+    <div class="error-box" id="yt-error"></div>
+    <div class="loader" id="yt-loader">
+      <div class="spinner"></div>
+      <span id="yt-loader-text">Récupération des commentaires…</span>
+    </div>
+
+    <div id="yt-results" style="display:none">
+
+      <!-- Video info -->
+      <div class="video-card" id="video-info-card" style="display:none">
+        <img id="video-thumb" src="" alt="">
+        <div class="video-card-info">
+          <h3 id="video-title"></h3>
+          <p id="video-meta"></p>
+        </div>
+      </div>
+
+      <!-- Metrics -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-value" id="pct-value">—</div>
+          <div class="gauge-track">
+            <div class="gauge-fill" id="gauge-fill" style="width:0%"></div>
+          </div>
+          <div class="metric-label">Taux de toxicité</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value" style="color:var(--red)" id="toxic-count">—</div>
+          <div class="metric-label">☠️ Commentaires toxiques</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-value" style="color:var(--green)" id="normal-count">—</div>
+          <div class="metric-label">✅ Commentaires normaux</div>
+        </div>
+      </div>
+
+      <!-- Filter -->
+      <div class="filter-bar">
+        <span class="filter-label">Afficher :</span>
+        <button class="filter-btn active-all"   onclick="setFilter('all',this)">Tous</button>
+        <button class="filter-btn"              onclick="setFilter('toxic',this)">Toxiques</button>
+        <button class="filter-btn"              onclick="setFilter('normal',this)">Normaux</button>
+        <span class="result-count" id="result-count"></span>
+      </div>
+
+      <!-- Comments -->
+      <div class="comments-list" id="comments-list"></div>
+
+    </div>
+
+    <!-- Empty state -->
+    <div class="empty-state" id="yt-empty">
+      <div class="empty-icon"><img src="video.png" alt="Video"></div>
+      <p>Collez l'URL d'une vidéo YouTube<br>pour analyser ses commentaires.</p>
+    </div>
+
+  </div>
+
+  <!-- ══ TAB TEXT ══ -->
+  <div class="tab-panel" id="panel-text">
+
+    <div class="input-section">
+      <label class="input-label">Commentaire à analyser</label>
+      <textarea id="txt-input" rows="4"
+                placeholder="Collez ou tapez un commentaire ici…&#10;Ex: You are such an idiot, nobody watches your videos!"></textarea>
+      <div style="margin-top:10px">
+        <button class="btn-primary" onclick="analyzeText()" id="txt-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Analyser ce commentaire
+        </button>
+      </div>
+    </div>
+
+    <div class="error-box" id="txt-error"></div>
+    <div class="loader" id="txt-loader">
+      <div class="spinner"></div>
+      <span>Analyse en cours…</span>
+    </div>
+
+    <div id="txt-results" style="display:none">
+
+      <!-- Result box -->
+      <div class="result-box" id="result-box">
+        <div class="result-icon" id="result-icon"></div>
+        <div class="result-title" id="result-title"></div>
+        <div class="result-sub"  id="result-sub"></div>
+      </div>
+
+      <!-- Explain -->
+      <div class="explain-grid">
+        <div class="explain-card">
+          <div class="explain-title toxic">⚠️ Mots → TOXIQUE</div>
+          <div class="word-chips" id="toxic-chips"></div>
+        </div>
+        <div class="explain-card">
+          <div class="explain-title normal">✓ Mots → NORMAL</div>
+          <div class="word-chips" id="normal-chips"></div>
+        </div>
+      </div>
+
+      <!-- Preprocessed -->
+      <div class="preproc-wrap">
+        <div class="preproc-label">Texte preprocessé</div>
+        <div class="preproc-text" id="preproc-text"></div>
+      </div>
+
+    </div>
+
+    <div class="empty-state" id="txt-empty">
+      <div class="empty-icon"><img src="copy-writing.png" alt="Write"></div>
+      <p>Entrez un commentaire pour tester<br>la détection de toxicité en temps réel.</p>
+    </div>
+
+  </div>
+
+</main>
+
+<script>
+// ═══════════════════════════════════════════════
+// CONFIG — modifier ces valeurs
+// ═══════════════════════════════════════════════
+const API_BASE = 'http://localhost:8000';  // URL de votre backend Flask/FastAPI
+
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+let allComments  = [];
+let currentFilter = 'all';
+
+// ═══════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', (i === 0 && tab === 'youtube') || (i === 1 && tab === 'text'));
+  });
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`panel-${tab}`).classList.add('active');
+}
+
+// ═══════════════════════════════════════════════
+// YOUTUBE ANALYSIS
+// ═══════════════════════════════════════════════
+async function analyzeYoutube() {
+  const url = document.getElementById('yt-url').value.trim();
+  if (!url) return;
+
+  showError('yt-error', '');
+  setLoader('yt-loader', true, 'Récupération des commentaires via l\'API YouTube…');
+  document.getElementById('yt-results').style.display = 'none';
+  document.getElementById('yt-empty').style.display   = 'none';
+  document.getElementById('yt-btn').disabled = true;
+
+  try {
+    const res  = await fetch(`${API_BASE}/analyze_youtube`, {
+      method : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body   : JSON.stringify({ url })
+    });
+
+    if (!res.ok) throw new Error((await res.json()).error || 'Erreur serveur');
+    const data = await res.json();
+
+    setLoader('yt-loader', true, `Analyse de ${data.comments.length} commentaires…`);
+    await sleep(300);
+
+    allComments   = data.comments;
+    currentFilter = 'all';
+
+    // Video info
+    if (data.video_info) {
+      document.getElementById('video-thumb').src  = data.video_info.thumbnail;
+      document.getElementById('video-title').textContent = data.video_info.title;
+      document.getElementById('video-meta').textContent  =
+        `📺 ${data.video_info.channel}  ·  👁️ ${fmt(data.video_info.views)} vues`;
+      document.getElementById('video-info-card').style.display = 'flex';
+    }
+
+    // Metrics
+    const nToxic  = data.comments.filter(c => c.pred === 1).length;
+    const nNormal = data.comments.filter(c => c.pred === 0).length;
+    const pct     = Math.round(nToxic / data.comments.length * 100);
+    const color   = pct > 30 ? 'var(--red)' : pct > 10 ? 'var(--amber)' : 'var(--green)';
+
+    document.getElementById('pct-value').textContent  = pct + '%';
+    document.getElementById('pct-value').style.color  = color;
+    document.getElementById('gauge-fill').style.width = pct + '%';
+    document.getElementById('gauge-fill').style.background = color;
+    document.getElementById('toxic-count').textContent  = nToxic;
+    document.getElementById('normal-count').textContent = nNormal;
+
+    renderComments('all');
+    document.getElementById('yt-results').style.display = 'block';
+
+  } catch (e) {
+    showError('yt-error', '❌ ' + e.message);
+    document.getElementById('yt-empty').style.display = 'block';
+  } finally {
+    setLoader('yt-loader', false);
+    document.getElementById('yt-btn').disabled = false;
+  }
+}
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.className = 'filter-btn';
+  });
+  btn.classList.add(`active-${f}`);
+  renderComments(f);
+}
+
+function renderComments(filter) {
+  const filtered = filter === 'all'    ? allComments
+                 : filter === 'toxic'  ? allComments.filter(c => c.pred === 1)
+                 :                       allComments.filter(c => c.pred === 0);
+
+  document.getElementById('result-count').textContent = `${filtered.length} commentaire(s)`;
+
+  const list = document.getElementById('comments-list');
+  list.innerHTML = filtered.map((c, i) => `
+    <div class="comment-card ${c.pred === 1 ? 'toxic' : 'normal'}"
+         style="animation-delay:${i * 30}ms">
+      <div class="comment-meta">
+        <span class="comment-author">
+          👤 <strong>${esc(c.author)}</strong>
+          <span class="comment-likes">· 👍 ${c.likes}</span>
+        </span>
+        <span class="badge ${c.pred === 1 ? 'toxic' : 'normal'}">
+          ${c.pred === 1 ? '☠ Toxique' : '✓ Normal'}
+        </span>
+      </div>
+      <div class="comment-text">${esc(c.text.slice(0, 300))}${c.text.length > 300 ? '…' : ''}</div>
+      <div class="word-chips">
+        ${c.pred === 1
+          ? (c.toxic_words  || []).slice(0,5).map(w => `<span class="chip toxic">⚠ ${esc(w)}</span>`).join('')
+          : (c.normal_words || []).slice(0,4).map(w => `<span class="chip normal">✓ ${esc(w)}</span>`).join('')
+        }
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════
+// TEXT ANALYSIS
+// ═══════════════════════════════════════════════
+async function analyzeText() {
+  const text = document.getElementById('txt-input').value.trim();
+  if (!text) return;
+
+  showError('txt-error', '');
+  setLoader('txt-loader', true);
+  document.getElementById('txt-results').style.display = 'none';
+  document.getElementById('txt-empty').style.display   = 'none';
+  document.getElementById('txt-btn').disabled = true;
+
+  try {
+    const res  = await fetch(`${API_BASE}/analyze_text`, {
+      method : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body   : JSON.stringify({ text })
+    });
+
+    if (!res.ok) throw new Error((await res.json()).error || 'Erreur serveur');
+    const data = await res.json();
+
+    // Result box
+    const box = document.getElementById('result-box');
+    box.className = `result-box ${data.pred === 1 ? 'toxic' : 'normal'}`;
+    document.getElementById('result-icon').textContent  = data.pred === 1 ? '☠️' : '✅';
+    document.getElementById('result-title').textContent = data.pred === 1 ? 'Commentaire Toxique' : 'Commentaire Normal';
+    document.getElementById('result-sub').textContent   = data.pred === 1
+      ? 'Ce commentaire a été classifié comme toxique par notre modèle LinearSVC + TF-IDF.'
+      : 'Ce commentaire a été classifié comme non-toxique par notre modèle LinearSVC + TF-IDF.';
+
+    // Chips
+    document.getElementById('toxic-chips').innerHTML =
+      (data.toxic_words || []).map(([w, s]) =>
+        `<span class="chip toxic">⚠ ${esc(w)} <strong>${s > 0 ? '+' : ''}${s.toFixed(3)}</strong></span>`
+      ).join('') || '<span style="color:var(--ink-light);font-size:0.82rem">Aucun détecté</span>';
+
+    document.getElementById('normal-chips').innerHTML =
+      (data.normal_words || []).map(([w, s]) =>
+        `<span class="chip normal">✓ ${esc(w)} <strong>${s.toFixed(3)}</strong></span>`
+      ).join('') || '<span style="color:var(--ink-light);font-size:0.82rem">Aucun détecté</span>';
+
+    document.getElementById('preproc-text').textContent = data.preprocessed || '';
+    document.getElementById('txt-results').style.display = 'block';
+
+  } catch (e) {
+    showError('txt-error', '❌ ' + e.message);
+    document.getElementById('txt-empty').style.display = 'block';
+  } finally {
+    setLoader('txt-loader', false);
+    document.getElementById('txt-btn').disabled = false;
+  }
+}
+
+// Entrée clavier
+document.getElementById('txt-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.ctrlKey) analyzeText();
+});
+
+// ═══════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.classList.toggle('show', !!msg);
+}
+
+function setLoader(id, show, text) {
+  const el = document.getElementById(id);
+  el.classList.toggle('show', show);
+  if (text) {
+    const t = el.querySelector('span');
+    if (t) t.textContent = text;
+  }
+}
+
+function esc(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function fmt(n) {
+  return new Intl.NumberFormat('fr-FR').format(n);
+}
+
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms));
+}
+</script>
+</body>
+</html>
